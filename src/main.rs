@@ -41,7 +41,19 @@ fn main() {
             ParseOutcome::Ignored | ParseOutcome::Malformed => ignored_malformed += 1,
         }
     }
+println!("\n[SECURITY ALERT] IPs with more than 3 failed attempts:");
+let suspicious_ips: Vec<_> = stats::count_by_ip(&failed_events)
+    .into_iter()
+    .filter(|&(_, count)| count > 3)
+    .collect();
 
+if suspicious_ips.is_empty() {
+    println!("No critical threats detected.");
+} else {
+    for (ip, count) in suspicious_ips {
+        println!("⚠️ ALERT: {} has {} failed attempts!", ip, count);
+    }
+}
     // 4. Afficher les résultats
     println!("TP1 Secure Log Analyzer");
     println!("Input file: {}", file_path);
