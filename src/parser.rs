@@ -10,21 +10,19 @@ pub enum ParseOutcome {
     Ignored,
     Malformed,
 }
+
+#[allow(clippy::collapsible_if)]
 pub fn parse_line(line: &str) -> ParseOutcome {
     let line = line.trim();
-    if line.is_empty() { return ParseOutcome::Ignored; }
+    if line.is_empty() {
+        return ParseOutcome::Ignored;
+    }
 
-    // On ne s'intéresse qu'aux échecs (Failed ou Invalid)
     if line.contains("Failed password for") || line.contains("Invalid user") {
         let parts: Vec<&str> = line.split_whitespace().collect();
-        
-        // Exemple type : ... Failed password for root from 192.168.1.1 ...
-        // On va chercher l'utilisateur et l'IP par position ou par mot-clé
-        
         let mut user = String::new();
         let mut ip = String::new();
 
-        // Logique simplifiée pour l'extraction
         if let Some(from_pos) = parts.iter().position(|&p| p == "from") {
             if from_pos > 0 {
                 user = parts[from_pos - 1].to_string();
@@ -33,7 +31,6 @@ pub fn parse_line(line: &str) -> ParseOutcome {
                 ip = parts[from_pos + 1].to_string();
             }
         } else if line.contains("Invalid user") {
-            // Cas particulier : "Invalid user oracle from 192.0.2.55"
             if let Some(user_pos) = parts.iter().position(|&p| p == "user") {
                 if user_pos + 1 < parts.len() {
                     user = parts[user_pos + 1].to_string();
@@ -59,8 +56,26 @@ mod tests {
 
     #[test]
     fn test_failed_login() {
-        let line = "Jan 10 08:15:21 srv01 sshd[1001]: Failed password for root from 1.2.3.4 port 123 ssh2";
+        let line =
+            "Jan 10 08:15:21 srv01 sshd[1001]: Failed password for root from 1.2.3.4 port 123 ssh2";
         let outcome = parse_line(line);
-        assert!(matches!(outcome, ParseOutcome::Failed(_)));
+        if let ParseOutcome::Failed(login) = outcome {
+            assert_eq!(login.user, "root");
+            assert_eq!(login.ip, "1.2.3.4");
+        } else {
+            panic!("Devrait être un FailedLogin");
+        }
+    }
+
+    #[test]
+    fn test_accepted_ignored() {
+        let line = "Jan 10 08:16:44 srv01 sshd[1003]: Accepted password for student from 192.0.2.15 port 44822 ssh2";
+        assert_eq!(parse_line(line), ParseOutcome::Ignored);
+    }
+
+    #[test]
+    fn test_malformed_line() {
+        let line = "MALFORMED LINE WITHOUT EXPECTED SSH FIELDS";
+        assert_eq!(parse_line(line), ParseOutcome::Malformed);
     }
 }

@@ -1,11 +1,11 @@
 mod parser;
 mod stats;
 
+use parser::{FailedLogin, ParseOutcome, parse_line};
 use std::env;
 use std::fs::File;
 use std::io::{BufRead, BufReader};
 use std::process;
-use parser::{parse_line, ParseOutcome, FailedLogin};
 
 fn main() {
     // 1. Lire l'argument (le fichier)
@@ -16,7 +16,7 @@ fn main() {
     }
 
     let file_path = &args[1];
-    
+
     // 2. Ouvrir le fichier de manière sécurisée
     let file = File::open(file_path).unwrap_or_else(|err| {
         eprintln!("Error opening file {}: {}", file_path, err);
@@ -34,7 +34,7 @@ fn main() {
             Ok(l) => l,
             Err(_) => continue,
         };
-        
+
         total_lines += 1;
         match parse_line(&line) {
             ParseOutcome::Failed(login) => failed_events.push(login),
@@ -51,12 +51,20 @@ fn main() {
     println!("- Ignored or malformed lines: {}", ignored_malformed);
 
     println!("\nTop source IPs:");
-    for (i, (ip, count)) in stats::count_by_ip(&failed_events).iter().take(5).enumerate() {
+    for (i, (ip, count)) in stats::count_by_ip(&failed_events)
+        .iter()
+        .take(5)
+        .enumerate()
+    {
         println!("{}. {} -> {} failed attempts", i + 1, ip, count);
     }
 
     println!("\nTop targeted users:");
-    for (i, (user, count)) in stats::count_by_user(&failed_events).iter().take(5).enumerate() {
+    for (i, (user, count)) in stats::count_by_user(&failed_events)
+        .iter()
+        .take(5)
+        .enumerate()
+    {
         println!("{}. {} -> {} failed attempts", i + 1, user, count);
     }
 }

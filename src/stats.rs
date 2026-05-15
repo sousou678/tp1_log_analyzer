@@ -1,5 +1,5 @@
-use std::collections::HashMap;
 use crate::parser::FailedLogin;
+use std::collections::HashMap;
 
 pub fn count_by_ip(events: &[FailedLogin]) -> Vec<(String, usize)> {
     let mut counts = HashMap::new();
